@@ -1,3 +1,38 @@
+import streamlit as st
+from PIL import Image, ImageDraw, ImageFont
+import textwrap
+import io
+import os
+
+st.set_page_config(page_title="VIP Arrival - Pullman", layout="centered")
+st.title("🌟 VIP Arrival Notice Generator")
+st.write("Nhập thông tin khách vào form bên dưới để tạo ảnh thông báo nhanh.")
+
+# Giao diện nhập liệu giữ nguyên 100% tên trường Excel
+with st.form("vip_form"):
+    guest_name = st.text_input("1. Guest full name *Bắt buộc")
+    
+    col1, col2 = st.columns(2)
+    title = col1.text_input("2. Title/position")
+    company = col2.text_input("3. Organization, agency or company")
+    
+    col3, col4 = st.columns(2)
+    eta = col3.text_input("4. ETA")
+    los = col4.text_input("5. LOS")
+    
+    col5, col6 = st.columns(2)
+    room = col5.text_input("6. Room number and room category")
+    source = col6.text_input("7. Booking source/referrer")
+    
+    contact = st.text_input("8. Booking contact/person in charge")
+    
+    requests = st.text_area("9. Special requests, preferences or information requiring attention")
+    transport = st.text_input("10. Transportation and arrival/departure arrangements, if applicable")
+    security = st.text_area("11. Security, safety, confidentiality or privacy requirements")
+    others = st.text_area("12. Others")
+
+    submitted = st.form_submit_button("🎨 Tạo Ảnh Thông Báo")
+
 # ... (Phần code giao diện form phía trên giữ nguyên) ...
 
 if submitted:
