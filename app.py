@@ -34,7 +34,7 @@ if submitted:
     else:
         try:
             # Mở ảnh template
-            img = Image.open('template.jpg')
+            img = Image.open('template.jpg.jpg')
             img = img.resize((1500, 1000), Image.Resampling.LANCZOS)
             draw = ImageDraw.Draw(img)
 
