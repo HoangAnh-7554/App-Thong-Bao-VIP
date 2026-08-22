@@ -86,7 +86,7 @@ if submitted:
             byte_im = buf.getvalue()
 
             st.success("✅ Đã tạo ảnh thành công!")
-            st.image(img, use_column_width=True) # Hiện ảnh xem trước
+            st.image(img, use_container_width=True) # Hiện ảnh xem trước
 
             # Nút tải ảnh về
             st.download_button(
