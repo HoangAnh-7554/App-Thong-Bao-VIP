@@ -33,28 +33,28 @@ if submitted:
         st.error("❌ Vui lòng nhập Tên Khách (Guest full name)!")
     else:
         try:
-            # 1. XỬ LÝ ẢNH NỀN
-            if os.path.exists('bg.jpg'):
-                img = Image.open('bg.jpg').convert("RGB")
-            elif os.path.exists('9df0bd08-bcd2-4678-a63f-062cd4f16656.jpg'):
-                img = Image.open('9df0bd08-bcd2-4678-a63f-062cd4f16656.jpg').convert("RGB")
-            else:
-                img = Image.new('RGB', (1500, 1000), (255, 255, 255)) 
-                
-            img = img.resize((1500, 1000), Image.Resampling.LANCZOS)
+            # 1. TẠO NỀN TRẮNG VÀ VIỀN
+            img = Image.new('RGB', (1500, 1000), (255, 255, 255)) 
             draw = ImageDraw.Draw(img)
-            
             draw.rectangle([(50, 50), (1450, 950)], outline=(200, 200, 200), width=3)
 
-            # 2. CHÈN LOGO PULLMAN
-            logo_path = 'logo.png'
-            if not os.path.exists(logo_path):
-                logo_path = 'thumb_1600914642_pullman-vt-removebg-preview.png'
-                
-            if os.path.exists(logo_path):
-                logo = Image.open(logo_path).convert("RGBA")
-                logo.thumbnail((280, 130), Image.Resampling.LANCZOS) 
-                img.paste(logo, (80, 60), mask=logo)
+            # 2. TÌM VÀ CHÈN LOGO (CODE CHỐNG LỖI ẨN ĐUÔI)
+            logo_files = ['logo.png', 'logo.png.png', 'thumb_1600914642_pullman-vt-removebg-preview.png', 'thumb_1600914642_pullman-vt-removebg-preview.png.png']
+            logo_path = None
+            for file in logo_files:
+                if os.path.exists(file):
+                    logo_path = file
+                    break
+            
+            if logo_path:
+                try:
+                    logo = Image.open(logo_path).convert("RGBA")
+                    logo.thumbnail((280, 130), Image.Resampling.LANCZOS) 
+                    img.paste(logo, (80, 60), mask=logo)
+                except Exception as e:
+                    st.warning(f"⚠️ Lỗi khi đọc file logo: {e}")
+            else:
+                st.warning("⚠️ Không tìm thấy file Logo. Hệ thống đang rà soát các tên: logo.png, logo.png.png...")
 
             # 3. CÀI ĐẶT FONT CHỮ
             try:
@@ -73,29 +73,27 @@ if submitted:
             except:
                 draw.text((580, 90), "VIP ARRIVAL NOTICE", font=font_title, fill=pullman_green)
 
-            # Hàm tính toán chiều cao của một đoạn văn bản sau khi ngắt dòng
+            # HÀM ĐO CHIỀU CAO CHỮ
             def calculate_height(label, value, max_w):
                 if not value or str(value).strip() == '' or str(value).lower() == 'nan' or str(value).lower() == 'n/a': 
                     return 0
                 text = f"{label}: {value}"
                 lines = textwrap.wrap(text, width=max_w)
-                return len(lines) * 32
+                return len(lines) * 35  # Tăng khoảng cách dòng lên 35px cho dễ đọc
 
-            # Hàm in chữ
+            # HÀM IN CHỮ
             def print_field(x, y, label, value, max_w):
                 if not value or str(value).strip() == '' or str(value).lower() == 'nan' or str(value).lower() == 'n/a': 
-                    return y
+                    return
                 text = f"{label}: {value}"
                 lines = textwrap.wrap(text, width=max_w)
                 for line in lines:
                     draw.text((x, y), line, font=font_text, fill=(0, 0, 0)) 
-                    y += 32
-                return y
+                    y += 35
 
-            # 5. BỐ CỤC 2 CỘT CĂN HÀNG THÔNG MINH
-            y_current = 190
+            # 5. BỐ CỤC 2 CỘT (CĂN GIÓNG TUYỆT ĐỐI)
+            y_current = 200 # Dời xuống một chút để không dính tiêu đề
             
-            # Khai báo dữ liệu từng hàng (cột trái, cột phải)
             rows = [
                 [("Guest full name", guest_name), ("Title/position", title)],
                 [("ETA", eta), ("Organization, agency or company", company)],
@@ -104,27 +102,33 @@ if submitted:
             ]
 
             for left_col, right_col in rows:
-                # Tính toán chiều cao cần thiết cho cả hai cột
                 h_left = calculate_height(left_col[0], left_col[1], 45)
                 h_right = calculate_height(right_col[0], right_col[1], 45)
                 
-                # In dữ liệu
-                print_field(100, y_current, left_col[0], left_col[1], 45)
-                print_field(800, y_current, right_col[0], right_col[1], 45)
-                
-                # Cập nhật vị trí Y dựa trên cột dài nhất, cộng thêm khoảng cách giữa các hàng
-                if max(h_left, h_right) > 0:
-                    y_current += max(h_left, h_right) + 15
+                # Chỉ xử lý khi có dữ liệu ở ít nhất 1 trong 2 cột
+                if h_left > 0 or h_right > 0:
+                    print_field(100, y_current, left_col[0], left_col[1], 45)
+                    print_field(800, y_current, right_col[0], right_col[1], 45)
+                    
+                    # Lấy chiều cao của bên dài nhất cộng thêm 15px khoảng trống
+                    y_current += max(h_left, h_right) + 15 
             
             # 6. BỐ CỤC TRUNG TÂM CHO THÔNG TIN DÀI
-            y_center = y_current + 10
+            y_center = y_current + 15
             
-            y_center = print_field(100, y_center, "Special requests, preferences or information requiring attention", requests, 100) + 15
-            y_center = print_field(100, y_center, "Transportation and arrival/departure arrangements, if applicable", transport, 100) + 15
-            y_center = print_field(100, y_center, "Security, safety, confidentiality or privacy requirements", security, 100) + 15
-            y_center = print_field(100, y_center, "Others", others, 100) + 15
+            def print_long_field(y, label, value):
+                h = calculate_height(label, value, 100)
+                if h > 0:
+                    print_field(100, y, label, value, 100)
+                    return y + h + 15
+                return y
 
-            # Xuất ảnh
+            y_center = print_long_field(y_center, "Special requests, preferences or information requiring attention", requests)
+            y_center = print_long_field(y_center, "Transportation and arrival/departure arrangements, if applicable", transport)
+            y_center = print_long_field(y_center, "Security, safety, confidentiality or privacy requirements", security)
+            y_center = print_long_field(y_center, "Others", others)
+
+            # 7. XUẤT ẢNH
             buf = io.BytesIO()
             img.save(buf, format="JPEG", quality=95)
             byte_im = buf.getvalue()
