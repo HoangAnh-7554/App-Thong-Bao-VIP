@@ -33,82 +33,100 @@ if submitted:
         st.error("❌ Vui lòng nhập Tên Khách (Guest full name)!")
     else:
         try:
-            # 1. XỬ LÝ ẢNH NỀN TỰ ĐỘNG
-            if os.path.exists('template.jpg'):
-                img = Image.open('template.jpg').convert("RGBA")
-            elif os.path.exists('template.jpg.jpg'):
-                img = Image.open('template.jpg.jpg').convert("RGBA")
+            # 1. XỬ LÝ ẢNH NỀN
+            if os.path.exists('bg.jpg'):
+                img = Image.open('bg.jpg').convert("RGB")
+            elif os.path.exists('9df0bd08-bcd2-4678-a63f-062cd4f16656.jpg'):
+                img = Image.open('9df0bd08-bcd2-4678-a63f-062cd4f16656.jpg').convert("RGB")
             else:
-                img = Image.new('RGBA', (1500, 1000), (30, 30, 30, 255)) # Nền đen dự phòng
+                img = Image.new('RGB', (1500, 1000), (255, 255, 255)) 
                 
             img = img.resize((1500, 1000), Image.Resampling.LANCZOS)
-            
-            # Phủ lớp đen mờ sang trọng và vẽ viền vàng vuông vức
-            overlay = Image.new('RGBA', img.size, (15, 15, 15, 220)) 
-            img = Image.alpha_composite(img, overlay)
-            
             draw = ImageDraw.Draw(img)
-            draw.rectangle([(50, 50), (1450, 950)], outline=(212, 175, 55, 255), width=3)
             
-            img = img.convert("RGB")
-            draw = ImageDraw.Draw(img)
+            draw.rectangle([(50, 50), (1450, 950)], outline=(200, 200, 200), width=3)
 
-            # 2. CÀI ĐẶT FONT
+            # 2. CHÈN LOGO PULLMAN
+            logo_path = 'logo.png'
+            if not os.path.exists(logo_path):
+                logo_path = 'thumb_1600914642_pullman-vt-removebg-preview.png'
+                
+            if os.path.exists(logo_path):
+                logo = Image.open(logo_path).convert("RGBA")
+                logo.thumbnail((280, 130), Image.Resampling.LANCZOS) 
+                img.paste(logo, (80, 60), mask=logo)
+
+            # 3. CÀI ĐẶT FONT CHỮ
             try:
                 font_title = ImageFont.truetype("arial.ttf", 45)
-                font_text = ImageFont.truetype("arial.ttf", 24) 
+                font_text = ImageFont.truetype("arial.ttf", 25) 
             except IOError:
                 font_title = ImageFont.load_default()
                 font_text = ImageFont.load_default()
 
-            # Căn giữa tiêu đề
+            # 4. TIÊU ĐỀ
+            pullman_green = (14, 76, 58) 
             try:
                 bbox = draw.textbbox((0, 0), "VIP ARRIVAL NOTICE", font=font_title)
                 text_w = bbox[2] - bbox[0]
-                draw.text(((1500 - text_w) / 2, 80), "VIP ARRIVAL NOTICE", font=font_title, fill=(212, 175, 55))
+                draw.text(((1500 - text_w) / 2, 90), "VIP ARRIVAL NOTICE", font=font_title, fill=pullman_green)
             except:
-                draw.text((580, 80), "VIP ARRIVAL NOTICE", font=font_title, fill=(212, 175, 55))
+                draw.text((580, 90), "VIP ARRIVAL NOTICE", font=font_title, fill=pullman_green)
 
-            # HÀM IN CHỮ ĐA NĂNG
+            # Hàm tính toán chiều cao của một đoạn văn bản sau khi ngắt dòng
+            def calculate_height(label, value, max_w):
+                if not value or str(value).strip() == '' or str(value).lower() == 'nan' or str(value).lower() == 'n/a': 
+                    return 0
+                text = f"{label}: {value}"
+                lines = textwrap.wrap(text, width=max_w)
+                return len(lines) * 32
+
+            # Hàm in chữ
             def print_field(x, y, label, value, max_w):
                 if not value or str(value).strip() == '' or str(value).lower() == 'nan' or str(value).lower() == 'n/a': 
                     return y
                 text = f"{label}: {value}"
                 lines = textwrap.wrap(text, width=max_w)
                 for line in lines:
-                    draw.text((x, y), line, font=font_text, fill=(255, 255, 255))
+                    draw.text((x, y), line, font=font_text, fill=(0, 0, 0)) 
                     y += 32
-                return y + 10 # Khoảng cách giữa các ô
+                return y
 
-            # 3. BỐ CỤC 2 CỘT (Cho thông tin ngắn)
-            y_left = 160
-            y_right = 160
+            # 5. BỐ CỤC 2 CỘT CĂN HÀNG THÔNG MINH
+            y_current = 190
             
-            # Cột trái (X = 100, ngắt dòng ở 45 ký tự)
-            y_left = print_field(100, y_left, "Guest full name", guest_name, 45)
-            y_left = print_field(100, y_left, "ETA", eta, 45)
-            y_left = print_field(100, y_left, "Room number and room category", room, 45)
-            y_left = print_field(100, y_left, "Booking contact/person in charge", contact, 45)
-            
-            # Cột phải (X = 800, ngắt dòng ở 45 ký tự)
-            y_right = print_field(800, y_right, "Title/position", title, 45)
-            y_right = print_field(800, y_right, "Organization, agency or company", company, 45)
-            y_right = print_field(800, y_right, "LOS", los, 45)
-            y_right = print_field(800, y_right, "Booking source/referrer", source, 45)
-            
-            # 4. BỐ CỤC TRUNG TÂM (Cho thông tin dài)
-            # Tìm điểm kết thúc thấp nhất của 2 cột trên để bắt đầu viết tiếp
-            y_center = max(y_left, y_right) + 15
-            
-            # Dàn ngang toàn màn hình (X = 100, ngắt dòng dài hơn ở 100 ký tự)
-            y_center = print_field(100, y_center, "Special requests, preferences or information requiring attention", requests, 100)
-            y_center = print_field(100, y_center, "Transportation and arrival/departure arrangements, if applicable", transport, 100)
-            y_center = print_field(100, y_center, "Security, safety, confidentiality or privacy requirements", security, 100)
-            y_center = print_field(100, y_center, "Others", others, 100)
+            # Khai báo dữ liệu từng hàng (cột trái, cột phải)
+            rows = [
+                [("Guest full name", guest_name), ("Title/position", title)],
+                [("ETA", eta), ("Organization, agency or company", company)],
+                [("Room number and room category", room), ("LOS", los)],
+                [("Booking contact/person in charge", contact), ("Booking source/referrer", source)]
+            ]
 
-            # Lưu ảnh
+            for left_col, right_col in rows:
+                # Tính toán chiều cao cần thiết cho cả hai cột
+                h_left = calculate_height(left_col[0], left_col[1], 45)
+                h_right = calculate_height(right_col[0], right_col[1], 45)
+                
+                # In dữ liệu
+                print_field(100, y_current, left_col[0], left_col[1], 45)
+                print_field(800, y_current, right_col[0], right_col[1], 45)
+                
+                # Cập nhật vị trí Y dựa trên cột dài nhất, cộng thêm khoảng cách giữa các hàng
+                if max(h_left, h_right) > 0:
+                    y_current += max(h_left, h_right) + 15
+            
+            # 6. BỐ CỤC TRUNG TÂM CHO THÔNG TIN DÀI
+            y_center = y_current + 10
+            
+            y_center = print_field(100, y_center, "Special requests, preferences or information requiring attention", requests, 100) + 15
+            y_center = print_field(100, y_center, "Transportation and arrival/departure arrangements, if applicable", transport, 100) + 15
+            y_center = print_field(100, y_center, "Security, safety, confidentiality or privacy requirements", security, 100) + 15
+            y_center = print_field(100, y_center, "Others", others, 100) + 15
+
+            # Xuất ảnh
             buf = io.BytesIO()
-            img.save(buf, format="JPEG")
+            img.save(buf, format="JPEG", quality=95)
             byte_im = buf.getvalue()
 
             st.success("✅ Đã tạo ảnh thành công!")
