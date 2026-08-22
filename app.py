@@ -34,11 +34,11 @@ if submitted:
     else:
         try:
             # 1. TẠO NỀN TRẮNG VÀ VIỀN
-            img = Image.new('RGB', (1500, 1000), (255, 255, 255)) 
+            img = Image.new('RGB', (1500, 1100), (255, 255, 255)) # Nới rộng không gian ảnh
             draw = ImageDraw.Draw(img)
-            draw.rectangle([(50, 50), (1450, 950)], outline=(200, 200, 200), width=3)
+            draw.rectangle([(50, 50), (1450, 1050)], outline=(200, 200, 200), width=3)
 
-            # 2. TÌM VÀ CHÈN LOGO (CODE CHỐNG LỖI ẨN ĐUÔI)
+            # 2. TÌM VÀ CHÈN LOGO (Phóng to logo lên)
             logo_files = ['logo.png', 'logo.png.png', 'thumb_1600914642_pullman-vt-removebg-preview.png', 'thumb_1600914642_pullman-vt-removebg-preview.png.png']
             logo_path = None
             for file in logo_files:
@@ -49,50 +49,57 @@ if submitted:
             if logo_path:
                 try:
                     logo = Image.open(logo_path).convert("RGBA")
-                    logo.thumbnail((280, 130), Image.Resampling.LANCZOS) 
-                    img.paste(logo, (80, 60), mask=logo)
+                    logo.thumbnail((320, 160), Image.Resampling.LANCZOS) # Kích thước lớn hơn
+                    img.paste(logo, (70, 60), mask=logo)
                 except Exception as e:
                     st.warning(f"⚠️ Lỗi khi đọc file logo: {e}")
             else:
-                st.warning("⚠️ Không tìm thấy file Logo. Hệ thống đang rà soát các tên: logo.png, logo.png.png...")
+                st.warning("⚠️ Không tìm thấy file Logo trên GitHub.")
 
             # 3. CÀI ĐẶT FONT CHỮ
             try:
-                font_title = ImageFont.truetype("arial.ttf", 45)
-                font_text = ImageFont.truetype("arial.ttf", 25) 
+                font_title = ImageFont.truetype("arial.ttf", 55)
+                font_text = ImageFont.truetype("arial.ttf", 26) 
             except IOError:
                 font_title = ImageFont.load_default()
                 font_text = ImageFont.load_default()
 
-            # 4. TIÊU ĐỀ
-            pullman_green = (14, 76, 58) 
+            # 4. TIÊU ĐỀ (MÀU XANH MINT TỪ HÌNH 2)
+            mint_green = (90, 220, 130) # Mã màu xanh mint rực rỡ
             try:
                 bbox = draw.textbbox((0, 0), "VIP ARRIVAL NOTICE", font=font_title)
                 text_w = bbox[2] - bbox[0]
-                draw.text(((1500 - text_w) / 2, 90), "VIP ARRIVAL NOTICE", font=font_title, fill=pullman_green)
+                draw.text(((1500 - text_w) / 2, 85), "VIP ARRIVAL NOTICE", font=font_title, fill=mint_green)
+                # Đổ bóng nhẹ cho tiêu đề nổi bật
+                draw.text((((1500 - text_w) / 2) + 1, 85), "VIP ARRIVAL NOTICE", font=font_title, fill=mint_green)
             except:
-                draw.text((580, 90), "VIP ARRIVAL NOTICE", font=font_title, fill=pullman_green)
+                draw.text((580, 85), "VIP ARRIVAL NOTICE", font=font_title, fill=mint_green)
 
-            # HÀM ĐO CHIỀU CAO CHỮ
-            def calculate_height(label, value, max_w):
+            # HÀM TÍNH CHIỀU CAO (Để 2 cột cân bằng nhau)
+            def calculate_height(value, max_w):
                 if not value or str(value).strip() == '' or str(value).lower() == 'nan' or str(value).lower() == 'n/a': 
                     return 0
-                text = f"{label}: {value}"
-                lines = textwrap.wrap(text, width=max_w)
-                return len(lines) * 35  # Tăng khoảng cách dòng lên 35px cho dễ đọc
+                lines = textwrap.wrap(str(value), width=max_w)
+                return (1 + len(lines)) * 36 # 1 dòng Tiêu đề + số dòng Nội dung
 
-            # HÀM IN CHỮ
+            # HÀM IN CHỮ ĐỘC LẬP: TIÊU ĐỀ Ở TRÊN, NỘI DUNG XUỐNG DÒNG MỚI
             def print_field(x, y, label, value, max_w):
                 if not value or str(value).strip() == '' or str(value).lower() == 'nan' or str(value).lower() == 'n/a': 
                     return
-                text = f"{label}: {value}"
-                lines = textwrap.wrap(text, width=max_w)
+                
+                # In Tiêu đề màu Xám (Dùng kỹ thuật in chồng 2 nét để tạo hiệu ứng In Đậm)
+                draw.text((x, y), label + ":", font=font_text, fill=(110, 110, 110))
+                draw.text((x+1, y), label + ":", font=font_text, fill=(110, 110, 110))
+                y += 36
+                
+                # In Nội dung khách hàng màu Đen ở dòng ngay bên dưới
+                lines = textwrap.wrap(str(value), width=max_w)
                 for line in lines:
                     draw.text((x, y), line, font=font_text, fill=(0, 0, 0)) 
-                    y += 35
+                    y += 36
 
-            # 5. BỐ CỤC 2 CỘT (CĂN GIÓNG TUYỆT ĐỐI)
-            y_current = 200 # Dời xuống một chút để không dính tiêu đề
+            # 5. BỐ CỤC 2 CỘT 
+            y_current = 200 
             
             rows = [
                 [("Guest full name", guest_name), ("Title/position", title)],
@@ -102,25 +109,22 @@ if submitted:
             ]
 
             for left_col, right_col in rows:
-                h_left = calculate_height(left_col[0], left_col[1], 45)
-                h_right = calculate_height(right_col[0], right_col[1], 45)
+                h_left = calculate_height(left_col[1], 42)
+                h_right = calculate_height(right_col[1], 42)
                 
-                # Chỉ xử lý khi có dữ liệu ở ít nhất 1 trong 2 cột
                 if h_left > 0 or h_right > 0:
-                    print_field(100, y_current, left_col[0], left_col[1], 45)
-                    print_field(800, y_current, right_col[0], right_col[1], 45)
-                    
-                    # Lấy chiều cao của bên dài nhất cộng thêm 15px khoảng trống
-                    y_current += max(h_left, h_right) + 15 
+                    print_field(90, y_current, left_col[0], left_col[1], 42)
+                    print_field(780, y_current, right_col[0], right_col[1], 42)
+                    y_current += max(h_left, h_right) + 20 
             
-            # 6. BỐ CỤC TRUNG TÂM CHO THÔNG TIN DÀI
-            y_center = y_current + 15
+            # 6. BỐ CỤC TRUNG TÂM
+            y_center = y_current + 10
             
             def print_long_field(y, label, value):
-                h = calculate_height(label, value, 100)
+                h = calculate_height(value, 95)
                 if h > 0:
-                    print_field(100, y, label, value, 100)
-                    return y + h + 15
+                    print_field(90, y, label, value, 95)
+                    return y + h + 20
                 return y
 
             y_center = print_long_field(y_center, "Special requests, preferences or information requiring attention", requests)
