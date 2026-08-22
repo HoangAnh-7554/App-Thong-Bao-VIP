@@ -33,12 +33,13 @@ if submitted:
         st.error("❌ Vui lòng nhập Tên Khách (Guest full name)!")
     else:
         try:
-            # 1. TẠO NỀN TRẮNG VÀ VIỀN
-            img = Image.new('RGB', (1500, 1100), (255, 255, 255)) # Nới rộng không gian ảnh
+            # 1. TẠO NỀN TRẮNG VÀ VIỀN (ĐÃ TĂNG CHIỀU CAO LÊN 1350)
+            img = Image.new('RGB', (1500, 1350), (255, 255, 255)) 
             draw = ImageDraw.Draw(img)
-            draw.rectangle([(50, 50), (1450, 1050)], outline=(200, 200, 200), width=3)
+            # Khung viền cũng được mở rộng tương ứng
+            draw.rectangle([(50, 50), (1450, 1300)], outline=(200, 200, 200), width=3)
 
-            # 2. TÌM VÀ CHÈN LOGO (Phóng to logo lên)
+            # 2. TÌM VÀ CHÈN LOGO
             logo_files = ['logo.png', 'logo.png.png', 'thumb_1600914642_pullman-vt-removebg-preview.png', 'thumb_1600914642_pullman-vt-removebg-preview.png.png']
             logo_path = None
             for file in logo_files:
@@ -49,8 +50,9 @@ if submitted:
             if logo_path:
                 try:
                     logo = Image.open(logo_path).convert("RGBA")
-                    logo.thumbnail((320, 160), Image.Resampling.LANCZOS) # Kích thước lớn hơn
-                    img.paste(logo, (70, 60), mask=logo)
+                    logo.thumbnail((320, 160), Image.Resampling.LANCZOS)
+                    # Dời logo lên cao hơn một chút (từ y=60 lên y=50)
+                    img.paste(logo, (70, 50), mask=logo)
                 except Exception as e:
                     st.warning(f"⚠️ Lỗi khi đọc file logo: {e}")
             else:
@@ -64,42 +66,40 @@ if submitted:
                 font_title = ImageFont.load_default()
                 font_text = ImageFont.load_default()
 
-            # 4. TIÊU ĐỀ (MÀU XANH MINT TỪ HÌNH 2)
-            mint_green = (90, 220, 130) # Mã màu xanh mint rực rỡ
+            # 4. TIÊU ĐỀ
+            mint_green = (90, 220, 130)
             try:
                 bbox = draw.textbbox((0, 0), "VIP ARRIVAL NOTICE", font=font_title)
                 text_w = bbox[2] - bbox[0]
-                draw.text(((1500 - text_w) / 2, 85), "VIP ARRIVAL NOTICE", font=font_title, fill=mint_green)
-                # Đổ bóng nhẹ cho tiêu đề nổi bật
-                draw.text((((1500 - text_w) / 2) + 1, 85), "VIP ARRIVAL NOTICE", font=font_title, fill=mint_green)
+                # Dời tiêu đề lên cao hơn (từ y=85 lên y=65)
+                draw.text(((1500 - text_w) / 2, 65), "VIP ARRIVAL NOTICE", font=font_title, fill=mint_green)
+                draw.text((((1500 - text_w) / 2) + 1, 65), "VIP ARRIVAL NOTICE", font=font_title, fill=mint_green)
             except:
-                draw.text((580, 85), "VIP ARRIVAL NOTICE", font=font_title, fill=mint_green)
+                draw.text((580, 65), "VIP ARRIVAL NOTICE", font=font_title, fill=mint_green)
 
-            # HÀM TÍNH CHIỀU CAO (Để 2 cột cân bằng nhau)
+            # HÀM TÍNH CHIỀU CAO (Đã thu gọn khoảng cách dòng một chút từ 36 xuống 34)
             def calculate_height(value, max_w):
                 if not value or str(value).strip() == '' or str(value).lower() == 'nan' or str(value).lower() == 'n/a': 
                     return 0
                 lines = textwrap.wrap(str(value), width=max_w)
-                return (1 + len(lines)) * 36 # 1 dòng Tiêu đề + số dòng Nội dung
+                return (1 + len(lines)) * 34
 
-            # HÀM IN CHỮ ĐỘC LẬP: TIÊU ĐỀ Ở TRÊN, NỘI DUNG XUỐNG DÒNG MỚI
+            # HÀM IN CHỮ ĐỘC LẬP
             def print_field(x, y, label, value, max_w):
                 if not value or str(value).strip() == '' or str(value).lower() == 'nan' or str(value).lower() == 'n/a': 
                     return
                 
-                # In Tiêu đề màu Xám (Dùng kỹ thuật in chồng 2 nét để tạo hiệu ứng In Đậm)
                 draw.text((x, y), label + ":", font=font_text, fill=(110, 110, 110))
                 draw.text((x+1, y), label + ":", font=font_text, fill=(110, 110, 110))
-                y += 36
+                y += 34
                 
-                # In Nội dung khách hàng màu Đen ở dòng ngay bên dưới
                 lines = textwrap.wrap(str(value), width=max_w)
                 for line in lines:
                     draw.text((x, y), line, font=font_text, fill=(0, 0, 0)) 
-                    y += 36
+                    y += 34
 
-            # 5. BỐ CỤC 2 CỘT 
-            y_current = 200 
+            # 5. BỐ CỤC 2 CỘT (Dời toàn bộ khối nội dung lên y=160 thay vì y=200)
+            y_current = 160 
             
             rows = [
                 [("Guest full name", guest_name), ("Title/position", title)],
@@ -115,7 +115,8 @@ if submitted:
                 if h_left > 0 or h_right > 0:
                     print_field(90, y_current, left_col[0], left_col[1], 42)
                     print_field(780, y_current, right_col[0], right_col[1], 42)
-                    y_current += max(h_left, h_right) + 20 
+                    # Thu gọn khoảng cách giữa các hàng 2 cột từ 20 xuống 15
+                    y_current += max(h_left, h_right) + 15 
             
             # 6. BỐ CỤC TRUNG TÂM
             y_center = y_current + 10
@@ -124,7 +125,8 @@ if submitted:
                 h = calculate_height(value, 95)
                 if h > 0:
                     print_field(90, y, label, value, 95)
-                    return y + h + 20
+                    # Thu gọn khoảng cách giữa các mục dài từ 20 xuống 15
+                    return y + h + 15
                 return y
 
             y_center = print_long_field(y_center, "Special requests, preferences or information requiring attention", requests)
