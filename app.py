@@ -24,6 +24,9 @@ with st.form("vip_form"):
     transport = st.text_input("Transport (Đưa đón)")
     requests = st.text_area("Special Requests (Yêu cầu đặc biệt)")
     security = st.text_area("Security / Privacy (Lưu ý an ninh/Riêng tư)")
+    
+    # TRƯỜNG MỚI ĐƯỢC THÊM VÀO ĐÂY:
+    others = st.text_area("Others (Thông tin khác)")
 
     submitted = st.form_submit_button("🎨 Tạo Ảnh Thông Báo")
 
@@ -33,17 +36,17 @@ if submitted:
         st.error("❌ Vui lòng nhập Tên Khách!")
     else:
         try:
-            # Mở ảnh template
+            # Mở ảnh template (Đã fix lỗi tên file)
             img = Image.open('template.jpg.jpg')
             img = img.resize((1500, 1000), Image.Resampling.LANCZOS)
             draw = ImageDraw.Draw(img)
 
-            # Cài đặt font chữ (Đọc file arial.ttf bạn đã copy vào thư mục)
+            # Cài đặt font chữ 
             try:
                 font_title = ImageFont.truetype("arial.ttf", 45)
                 font_text = ImageFont.truetype("arial.ttf", 30)
             except IOError:
-                st.warning("⚠️ Không tìm thấy file 'arial.ttf'. Ảnh sẽ dùng font mặc định siêu nhỏ.")
+                st.warning("⚠️ Không tìm thấy file 'arial.ttf'. Ảnh sẽ dùng font mặc định.")
                 font_title = ImageFont.load_default()
                 font_text = ImageFont.load_default()
 
@@ -56,8 +59,8 @@ if submitted:
             y_pos = start_y
             
             def draw_info(label, value):
-                global y_pos # Sửa lỗi biến cục bộ
-                if not value or value.strip() == '': 
+                global y_pos
+                if not value or value.strip() == '' or value.lower() == 'nan' or value == 'N/A': 
                     return
                 text_to_print = f"{label}: {value}"
                 wrapped_text = textwrap.wrap(text_to_print, width=max_chars)
@@ -71,14 +74,17 @@ if submitted:
             draw_info("Room", room)
             
             eta_los = []
-            if eta: eta_los.append(f"ETA: {eta}")
-            if los: eta_los.append(f"LOS: {los}")
+            if eta and eta != 'N/A': eta_los.append(f"ETA: {eta}")
+            if los and los != 'N/A': eta_los.append(f"LOS: {los}")
             if eta_los:
                 draw_info("Arrival", " | ".join(eta_los))
                 
             draw_info("Transport", transport)
             draw_info("Requests", requests)
             draw_info("Security", security)
+            
+            # LỆNH IN TRƯỜNG MỚI LÊN ẢNH:
+            draw_info("Others", others)
 
             # Chuyển ảnh thành dạng byte để web có thể tải về
             buf = io.BytesIO()
@@ -86,7 +92,9 @@ if submitted:
             byte_im = buf.getvalue()
 
             st.success("✅ Đã tạo ảnh thành công!")
-            st.image(img, use_container_width=True) # Hiện ảnh xem trước
+            
+            # Đã fix lỗi use_container_width
+            st.image(img, use_container_width=True) 
 
             # Nút tải ảnh về
             st.download_button(
