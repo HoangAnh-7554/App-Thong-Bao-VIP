@@ -25,6 +25,10 @@ with st.form("vip_form"):
     transport = st.text_input("10. Transportation and arrival/departure arrangements, if applicable")
     security = st.text_area("11. Security, safety, confidentiality or privacy requirements")
     others = st.text_area("12. Others")
+    
+    # THÊM NÚT TẢI ẢNH AVATAR Ở ĐÂY
+    st.write("---")
+    avatar_upload = st.file_uploader("📸 Tải ảnh đại diện khách VIP (Tùy chọn - Ảnh sẽ tự động được bo tròn)", type=['png', 'jpg', 'jpeg'])
 
     submitted = st.form_submit_button("🎨 Tạo Ảnh Thông Báo")
 
@@ -33,10 +37,9 @@ if submitted:
         st.error("❌ Vui lòng nhập Tên Khách (Guest full name)!")
     else:
         try:
-            # 1. TẠO NỀN TRẮNG VÀ VIỀN (ĐÃ TĂNG CHIỀU CAO LÊN 1350)
+            # 1. TẠO NỀN TRẮNG VÀ VIỀN
             img = Image.new('RGB', (1500, 1350), (255, 255, 255)) 
             draw = ImageDraw.Draw(img)
-            # Khung viền cũng được mở rộng tương ứng
             draw.rectangle([(50, 50), (1450, 1300)], outline=(200, 200, 200), width=3)
 
             # 2. TÌM VÀ CHÈN LOGO
@@ -51,14 +54,38 @@ if submitted:
                 try:
                     logo = Image.open(logo_path).convert("RGBA")
                     logo.thumbnail((320, 160), Image.Resampling.LANCZOS)
-                    # Dời logo lên cao hơn một chút (từ y=60 lên y=50)
                     img.paste(logo, (70, 50), mask=logo)
                 except Exception as e:
                     st.warning(f"⚠️ Lỗi khi đọc file logo: {e}")
-            else:
-                st.warning("⚠️ Không tìm thấy file Logo trên GitHub.")
 
-            # 3. CÀI ĐẶT FONT CHỮ
+            # 3. XỬ LÝ ẢNH AVATAR KHÁCH HÀNG (NẾU CÓ TẢI LÊN)
+            if avatar_upload is not None:
+                try:
+                    avatar = Image.open(avatar_upload).convert("RGBA")
+                    
+                    # Tự động cắt ảnh thành hình vuông (lấy tâm)
+                    min_dim = min(avatar.size)
+                    left = (avatar.width - min_dim) / 2
+                    top = (avatar.height - min_dim) / 2
+                    right = (avatar.width + min_dim) / 2
+                    bottom = (avatar.height + min_dim) / 2
+                    avatar = avatar.crop((left, top, right, bottom))
+                    
+                    # Resize lại cho kích thước chuẩn
+                    avatar_size = (160, 160)
+                    avatar = avatar.resize(avatar_size, Image.Resampling.LANCZOS)
+                    
+                    # Tạo mặt nạ (mask) để bo tròn ảnh
+                    mask = Image.new('L', avatar_size, 0)
+                    mask_draw = ImageDraw.Draw(mask)
+                    mask_draw.ellipse((0, 0, avatar_size[0], avatar_size[1]), fill=255)
+                    
+                    # Dán avatar vào góc trên bên phải của khung
+                    img.paste(avatar, (1250, 60), mask=mask)
+                except Exception as e:
+                    st.warning(f"⚠️ Không thể xử lý ảnh Avatar: {e}")
+
+            # 4. CÀI ĐẶT FONT CHỮ
             try:
                 font_title = ImageFont.truetype("arial.ttf", 55)
                 font_text = ImageFont.truetype("arial.ttf", 26) 
@@ -66,18 +93,17 @@ if submitted:
                 font_title = ImageFont.load_default()
                 font_text = ImageFont.load_default()
 
-            # 4. TIÊU ĐỀ
+            # 5. TIÊU ĐỀ
             mint_green = (90, 220, 130)
             try:
                 bbox = draw.textbbox((0, 0), "VIP ARRIVAL NOTICE", font=font_title)
                 text_w = bbox[2] - bbox[0]
-                # Dời tiêu đề lên cao hơn (từ y=85 lên y=65)
                 draw.text(((1500 - text_w) / 2, 65), "VIP ARRIVAL NOTICE", font=font_title, fill=mint_green)
                 draw.text((((1500 - text_w) / 2) + 1, 65), "VIP ARRIVAL NOTICE", font=font_title, fill=mint_green)
             except:
                 draw.text((580, 65), "VIP ARRIVAL NOTICE", font=font_title, fill=mint_green)
 
-            # HÀM TÍNH CHIỀU CAO (Đã thu gọn khoảng cách dòng một chút từ 36 xuống 34)
+            # HÀM TÍNH CHIỀU CAO
             def calculate_height(value, max_w):
                 if not value or str(value).strip() == '' or str(value).lower() == 'nan' or str(value).lower() == 'n/a': 
                     return 0
@@ -98,7 +124,7 @@ if submitted:
                     draw.text((x, y), line, font=font_text, fill=(0, 0, 0)) 
                     y += 34
 
-            # 5. BỐ CỤC 2 CỘT (Dời toàn bộ khối nội dung lên y=160 thay vì y=200)
+            # 6. BỐ CỤC 2 CỘT 
             y_current = 160 
             
             rows = [
@@ -115,17 +141,15 @@ if submitted:
                 if h_left > 0 or h_right > 0:
                     print_field(90, y_current, left_col[0], left_col[1], 42)
                     print_field(780, y_current, right_col[0], right_col[1], 42)
-                    # Thu gọn khoảng cách giữa các hàng 2 cột từ 20 xuống 15
                     y_current += max(h_left, h_right) + 15 
             
-            # 6. BỐ CỤC TRUNG TÂM
+            # 7. BỐ CỤC TRUNG TÂM
             y_center = y_current + 10
             
             def print_long_field(y, label, value):
                 h = calculate_height(value, 95)
                 if h > 0:
                     print_field(90, y, label, value, 95)
-                    # Thu gọn khoảng cách giữa các mục dài từ 20 xuống 15
                     return y + h + 15
                 return y
 
@@ -134,7 +158,7 @@ if submitted:
             y_center = print_long_field(y_center, "Security, safety, confidentiality or privacy requirements", security)
             y_center = print_long_field(y_center, "Others", others)
 
-            # 7. XUẤT ẢNH
+            # 8. XUẤT ẢNH
             buf = io.BytesIO()
             img.save(buf, format="JPEG", quality=95)
             byte_im = buf.getvalue()
