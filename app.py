@@ -3,6 +3,7 @@ from PIL import Image, ImageDraw, ImageFont
 import textwrap
 import io
 import os
+from streamlit_cropper import st_cropper # Đã thêm công cụ cắt ảnh bằng tay
 
 st.set_page_config(page_title="VIP Arrival - Pullman", layout="centered")
 st.title("🌟 VIP Arrival Notice Generator")
@@ -27,13 +28,23 @@ with st.form("vip_form"):
     others = st.text_area("12. Others")
     
     st.write("---")
-    avatar_upload = st.file_uploader("📸 Tải ảnh đại diện khách VIP (Tùy chọn - Tự động nhận diện khuôn mặt)", type=['png', 'jpg', 'jpeg'])
+    avatar_upload = st.file_uploader("📸 Tải ảnh đại diện khách VIP (Tùy chọn)", type=['png', 'jpg', 'jpeg'])
+    
+    # Nút bấm được dời vào trong form
+    submitted = st.form_submit_button("🎨 Ghi nhận thông tin")
 
-    submitted = st.form_submit_button("🎨 Tạo Ảnh Thông Báo")
+# XỬ LÝ ẢNH CẮT THỦ CÔNG NGOÀI FORM
+cropped_avatar = None
+if avatar_upload:
+    st.info("👇 Hãy kéo thả và thu phóng khung màu xanh bên dưới để chọn đúng khuôn mặt khách!")
+    img_to_crop = Image.open(avatar_upload).convert("RGBA")
+    # Hiển thị công cụ cắt ảnh thủ công (tỷ lệ 1:1 hình vuông)
+    cropped_avatar = st_cropper(img_to_crop, aspect_ratio=(1, 1), box_color='green', return_type='image')
 
-if submitted:
+# NÚT XUẤT ẢNH CHÍNH THỨC
+if st.button("🚀 BẤM VÀO ĐÂY ĐỂ XUẤT ẢNH VIP NOTICE"):
     if not guest_name:
-        st.error("❌ Vui lòng nhập Tên Khách (Guest full name)!")
+        st.error("❌ Vui lòng nhập Tên Khách ở form trên và bấm 'Ghi nhận thông tin' trước!")
     else:
         try:
             # 1. TẠO NỀN TRẮNG VÀ VIỀN 
@@ -55,39 +66,21 @@ if submitted:
                     logo.thumbnail((320, 160), Image.Resampling.LANCZOS)
                     img.paste(logo, (70, 50), mask=logo)
                 except Exception as e:
-                    st.warning(f"⚠️ Lỗi khi đọc file logo: {e}")
+                    pass
 
-            # 3. XỬ LÝ ẢNH AVATAR KHÁCH HÀNG (CẮT THÔNG MINH)
-            if avatar_upload is not None:
+            # 3. CHÈN AVATAR ĐÃ ĐƯỢC CẮT BẰNG TAY CỦA BẠN
+            if cropped_avatar:
                 try:
-                    avatar = Image.open(avatar_upload).convert("RGBA")
-                    
-                    min_dim = min(avatar.width, avatar.height)
-                    left = (avatar.width - min_dim) / 2
-                    
-                    # THUẬT TOÁN MỚI: Nếu là ảnh dọc, ưu tiên cắt phần trên (khuôn mặt)
-                    if avatar.height > avatar.width:
-                        top = (avatar.height - min_dim) * 0.15 # Chỉ lấy 15% khoảng trống phía trên
-                    else:
-                        top = (avatar.height - min_dim) / 2    # Ảnh ngang thì cắt chính giữa
-                        
-                    right = left + min_dim
-                    bottom = top + min_dim
-                    avatar = avatar.crop((left, top, right, bottom))
-                    
-                    # Phóng to kích thước lên 220x220
                     avatar_size = (220, 220)
-                    avatar = avatar.resize(avatar_size, Image.Resampling.LANCZOS)
+                    avatar = cropped_avatar.resize(avatar_size, Image.Resampling.LANCZOS)
                     
-                    # Bo góc nhẹ 10px
                     mask = Image.new('L', avatar_size, 0)
                     mask_draw = ImageDraw.Draw(mask)
                     mask_draw.rounded_rectangle((0, 0, avatar_size[0], avatar_size[1]), radius=10, fill=255)
                     
-                    # Dán avatar vào góc
                     img.paste(avatar, (1200, 60), mask=mask)
                 except Exception as e:
-                    st.warning(f"⚠️ Không thể xử lý ảnh Avatar: {e}")
+                    st.warning(f"⚠️ Lỗi chèn Avatar: {e}")
 
             # 4. CÀI ĐẶT FONT CHỮ
             try:
@@ -114,7 +107,7 @@ if submitted:
                 lines = textwrap.wrap(str(value), width=max_w)
                 return (1 + len(lines)) * 34
 
-            # HÀM IN CHỮ ĐỘC LẬP
+            # HÀM IN CHỮ
             def print_field(x, y, label, value, max_w):
                 if not value or str(value).strip() == '' or str(value).lower() == 'nan' or str(value).lower() == 'n/a': 
                     return
