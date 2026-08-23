@@ -26,9 +26,8 @@ with st.form("vip_form"):
     security = st.text_area("11. Security, safety, confidentiality or privacy requirements")
     others = st.text_area("12. Others")
     
-    # THÊM NÚT TẢI ẢNH AVATAR Ở ĐÂY
     st.write("---")
-    avatar_upload = st.file_uploader("📸 Tải ảnh đại diện khách VIP (Tùy chọn - Ảnh sẽ tự động được bo tròn)", type=['png', 'jpg', 'jpeg'])
+    avatar_upload = st.file_uploader("📸 Tải ảnh đại diện khách VIP (Tùy chọn)", type=['png', 'jpg', 'jpeg'])
 
     submitted = st.form_submit_button("🎨 Tạo Ảnh Thông Báo")
 
@@ -37,7 +36,7 @@ if submitted:
         st.error("❌ Vui lòng nhập Tên Khách (Guest full name)!")
     else:
         try:
-            # 1. TẠO NỀN TRẮNG VÀ VIỀN
+            # 1. TẠO NỀN TRẮNG VÀ VIỀN 
             img = Image.new('RGB', (1500, 1350), (255, 255, 255)) 
             draw = ImageDraw.Draw(img)
             draw.rectangle([(50, 50), (1450, 1300)], outline=(200, 200, 200), width=3)
@@ -58,12 +57,12 @@ if submitted:
                 except Exception as e:
                     st.warning(f"⚠️ Lỗi khi đọc file logo: {e}")
 
-            # 3. XỬ LÝ ẢNH AVATAR KHÁCH HÀNG (NẾU CÓ TẢI LÊN)
+            # 3. XỬ LÝ ẢNH AVATAR KHÁCH HÀNG (HÌNH VUÔNG LỚN)
             if avatar_upload is not None:
                 try:
                     avatar = Image.open(avatar_upload).convert("RGBA")
                     
-                    # Tự động cắt ảnh thành hình vuông (lấy tâm)
+                    # Cắt thành hình vuông
                     min_dim = min(avatar.size)
                     left = (avatar.width - min_dim) / 2
                     top = (avatar.height - min_dim) / 2
@@ -71,17 +70,17 @@ if submitted:
                     bottom = (avatar.height + min_dim) / 2
                     avatar = avatar.crop((left, top, right, bottom))
                     
-                    # Resize lại cho kích thước chuẩn
-                    avatar_size = (160, 160)
+                    # Phóng to kích thước lên 220x220
+                    avatar_size = (220, 220)
                     avatar = avatar.resize(avatar_size, Image.Resampling.LANCZOS)
                     
-                    # Tạo mặt nạ (mask) để bo tròn ảnh
+                    # Tạo viền bo góc nhẹ (10px) cho tinh tế thay vì cắt tròn
                     mask = Image.new('L', avatar_size, 0)
                     mask_draw = ImageDraw.Draw(mask)
-                    mask_draw.ellipse((0, 0, avatar_size[0], avatar_size[1]), fill=255)
+                    mask_draw.rounded_rectangle((0, 0, avatar_size[0], avatar_size[1]), radius=10, fill=255)
                     
-                    # Dán avatar vào góc trên bên phải của khung
-                    img.paste(avatar, (1250, 60), mask=mask)
+                    # Dán avatar vào góc trên bên phải, dịch sang trái một chút để cân bằng
+                    img.paste(avatar, (1200, 60), mask=mask)
                 except Exception as e:
                     st.warning(f"⚠️ Không thể xử lý ảnh Avatar: {e}")
 
@@ -124,8 +123,8 @@ if submitted:
                     draw.text((x, y), line, font=font_text, fill=(0, 0, 0)) 
                     y += 34
 
-            # 6. BỐ CỤC 2 CỘT 
-            y_current = 160 
+            # 6. BỐ CỤC 2 CỘT (Dời y_current xuống một chút để tránh avatar to)
+            y_current = 200 
             
             rows = [
                 [("Guest full name", guest_name), ("Title/position", title)],
